@@ -1,0 +1,46 @@
+name: Update Prompts
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 1 * *"
+
+jobs:
+  update-prompts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: "refs/heads/main"
+      - name: Copy prompts.csv file
+        run: curl https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv -o prompts.csv
+      - name: Check for changes
+        run: |
+          if git diff --quiet prompts.csv; then
+            echo "No changes detected. Exiting."
+            exit 0
+          fi
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Translate prompts to Chinese
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python translate.py
+      - name: Configure git
+        run: |
+          git config user.email "gandli@qq.com"
+          git config user.name "gandli"
+      - name: Commit changes
+        run: |
+          git add .
+          git commit -m "🚀 update:更新 prompts.csv、prompts-zh.json 文件 ($(date '+%Y-%m-%d %H:%M:%S'))"
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          force: true
